@@ -180,8 +180,7 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 // buildNodeCreationRequest constructs the query parameters for node creation via JSON API
 func buildNodeCreationRequest(name string, config *nodeConfig, launcher interface{}) map[string]string {
 	const NODE_TYPE = "hudson.slaves.DumbSlave$DescriptorImpl"
-	const MODE = "NORMAL"
-	
+
 	return map[string]string{
 		"name": name,
 		"type": NODE_TYPE,
@@ -190,7 +189,7 @@ func buildNodeCreationRequest(name string, config *nodeConfig, launcher interfac
 			"nodeDescription":    config.description,
 			"remoteFS":           config.remoteFS,
 			"numExecutors":       config.numExecutors,
-			"mode":               MODE,
+			"mode":               string(config.mode),
 			"type":               NODE_TYPE,
 			"labelString":        config.label,
 			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
@@ -224,6 +223,7 @@ func (j *Jenkins) CreateNodeV2(ctx context.Context, name string, options ...Node
 		description:  "",
 		remoteFS:     "/var/jenkins",
 		label:        "",
+		mode:         NORMAL,
 		launcher:     DefaultJNLPLauncher(),
 	}
 
@@ -239,7 +239,7 @@ func (j *Jenkins) CreateNodeV2(ctx context.Context, name string, options ...Node
 		Description:  config.description,
 		RemoteFS:     config.remoteFS,
 		Label:        config.label,
-		Mode:         NORMAL,
+		Mode:         config.mode,
 		Launcher: &CustomLauncher{
 			Class:    config.launcher.GetClass(),
 			Launcher: config.launcher,

@@ -725,3 +725,102 @@ func TestUpdateNodeV2WithMultipleNodeProperties(t *testing.T) {
 		assert.NotNil(t, slaveConfig.NodeProperties)
 	})
 }
+
+func TestCreateNodeV2WithMode(t *testing.T) {
+	ctx := GetTestContext()
+
+	t.Run("CreateNodeV2DefaultsToNormalMode", func(t *testing.T) {
+		nodeName := "test_node_v2_mode_default"
+
+		node := createTestNode(t, ctx, nodeName,
+			WithNumExecutors(1),
+			WithRemoteFS("/var/jenkins"),
+		)
+		slaveConfig := verifyNodeConfig(t, ctx, node, nodeName)
+		assert.Equal(t, NORMAL, slaveConfig.Mode)
+	})
+
+	t.Run("CreateNodeV2WithExclusiveMode", func(t *testing.T) {
+		nodeName := "test_node_v2_mode_exclusive"
+
+		node := createTestNode(t, ctx, nodeName,
+			WithNumExecutors(1),
+			WithRemoteFS("/var/jenkins"),
+			WithLabel("exclusive label"),
+			WithMode(EXCLUSIVE),
+		)
+		slaveConfig := verifyNodeConfig(t, ctx, node, nodeName)
+		assert.Equal(t, EXCLUSIVE, slaveConfig.Mode)
+	})
+}
+
+func TestUpdateNodeV2WithMode(t *testing.T) {
+	ctx := GetTestContext()
+
+	t.Run("UpdateNodeV2SetsExclusiveMode", func(t *testing.T) {
+		nodeName := "test_update_v2_mode_exclusive"
+		node, err := createMockNode(ctx, nodeName, nil)
+		require.NoError(t, err)
+		require.NotNil(t, node)
+		defer node.Delete(ctx)
+
+		updatedNode, err := node.UpdateNodeV2(ctx, nodeName,
+			WithLabel("best_label"),
+			WithMode(EXCLUSIVE),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, updatedNode)
+
+		slaveConfig, err := updatedNode.GetSlaveConfig(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, slaveConfig)
+		assert.Equal(t, EXCLUSIVE, slaveConfig.Mode)
+	})
+
+	t.Run("UpdateNodeV2PreservesExclusiveModeWhenReSpecified", func(t *testing.T) {
+		nodeName := "test_update_v2_mode_preserve"
+		node := createTestNode(t, ctx, nodeName,
+			WithNumExecutors(1),
+			WithLabel("exclusive label"),
+			WithMode(EXCLUSIVE),
+		)
+
+		// Simulate an update to an unrelated field (numExecutors) where the
+		// caller re-specifies the desired mode, as a Terraform provider would
+		// on every apply. The exclusive mode must survive the update.
+		updatedNode, err := node.UpdateNodeV2(ctx, nodeName,
+			WithNumExecutors(3),
+			WithLabel("exclusive label"),
+			WithMode(EXCLUSIVE),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, updatedNode)
+
+		slaveConfig, err := updatedNode.GetSlaveConfig(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, slaveConfig)
+		assert.Equal(t, 3, slaveConfig.NumExecutors)
+		assert.Equal(t, EXCLUSIVE, slaveConfig.Mode)
+	})
+
+	t.Run("UpdateNodeV2WithoutModeOptionDefaultsToNormal", func(t *testing.T) {
+		nodeName := "test_update_v2_mode_unspecified"
+		node := createTestNode(t, ctx, nodeName,
+			WithNumExecutors(1),
+			WithMode(EXCLUSIVE),
+		)
+
+		// Mirrors UpdateNodeV2's existing full-replace semantics (the same as
+		// label/description): options not passed fall back to their defaults.
+		updatedNode, err := node.UpdateNodeV2(ctx, nodeName,
+			WithNumExecutors(2),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, updatedNode)
+
+		slaveConfig, err := updatedNode.GetSlaveConfig(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, slaveConfig)
+		assert.Equal(t, NORMAL, slaveConfig.Mode)
+	})
+}

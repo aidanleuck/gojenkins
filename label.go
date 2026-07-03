@@ -25,8 +25,10 @@ type Label struct {
 type MODE string
 
 const (
-	NORMAL    MODE = "NORMAL"
-	EXCLUSIVE      = "EXCLUSIVE"
+	// NORMAL corresponds to Jenkins' "Use this node as much as possible" usage setting.
+	NORMAL MODE = "NORMAL"
+	// EXCLUSIVE corresponds to Jenkins' "Only build jobs with label expressions matching this node" usage setting.
+	EXCLUSIVE MODE = "EXCLUSIVE"
 )
 
 type LabelNode struct {
