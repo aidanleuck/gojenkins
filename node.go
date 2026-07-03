@@ -114,6 +114,7 @@ type nodeConfig struct {
 	description    string
 	remoteFS       string
 	label          string
+	mode           MODE
 	launcher       Launcher
 	nodeProperties []NodeProperty
 }
@@ -157,6 +158,16 @@ func WithRemoteFS(fs string) NodeOption {
 func WithLabel(label string) NodeOption {
 	return func(c *nodeConfig) {
 		c.label = label
+	}
+}
+
+// WithMode sets the node's usage mode. Use NORMAL to allow the node to build
+// any job ("Use this node as much as possible") or EXCLUSIVE to restrict it to
+// jobs whose label expressions match the node ("Only build jobs with label
+// expressions matching this node"). If not set, the node defaults to NORMAL.
+func WithMode(mode MODE) NodeOption {
+	return func(c *nodeConfig) {
+		c.mode = mode
 	}
 }
 
@@ -271,6 +282,7 @@ func (n *Node) UpdateNodeV2(ctx context.Context, name string, options ...NodeOpt
 		description:  "",
 		remoteFS:     "/var/jenkins",
 		label:        "",
+		mode:         NORMAL,
 		launcher:     DefaultJNLPLauncher(),
 	}
 
@@ -286,7 +298,7 @@ func (n *Node) UpdateNodeV2(ctx context.Context, name string, options ...NodeOpt
 		Description:  config.description,
 		RemoteFS:     config.remoteFS,
 		Label:        config.label,
-		Mode:         NORMAL,
+		Mode:         config.mode,
 		Launcher: &CustomLauncher{
 			Class:    config.launcher.GetClass(),
 			Launcher: config.launcher,
